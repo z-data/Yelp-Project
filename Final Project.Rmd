@@ -8,14 +8,113 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
 
 ```{r}
-# Load the package required to read JSON files.
+# Load the package required
 library("rjson")
+library(yelpr)
+library(dplyr)
 
-# Give the input file name to the function.
-result <- fromJSON(file = "input.json")
+# Get my API key
+key = readLines("Yelp API.txt", warn = F)
 
-# Print the result.
-print(result)
+
+#I tried a few times and it seems borough by borough is best 
+#Manhattan restaurant calls 
+resturants = data.frame()
+for (i in 0:99) {
+  
+  temp = business_search(api_key = key,
+                  location = 'Manhattan',
+                  term = "resturants",
+                  limit = 50,
+                  offset = 50*i)
+  resturants = bind_rows(resturants, as.data.frame(temp))
+}
+#Brooklyn restaurant calls 
+for (i in 0:99) {
+  
+  temp = business_search(api_key = key,
+                  location = 'Brooklyn',
+                  term = "resturants",
+                  limit = 50,
+                  offset = 50*i)
+  resturants = bind_rows(resturants, as.data.frame(temp))
+}
+#Queens restaurant calls 
+for (i in 0:99) {
+  
+  temp = business_search(api_key = key,
+                  location = 'Queens',
+                  term = "resturants",
+                  limit = 50,
+                  offset = 50*i)
+  resturants = bind_rows(resturants, as.data.frame(temp))
+}
+#Bronx restaurant calls
+for (i in 0:99) {
+  
+  temp = business_search(api_key = key,
+                  location = 'Bronx',
+                  term = "resturants",
+                  limit = 50,
+                  offset = 50*i)
+  resturants = bind_rows(resturants, as.data.frame(temp))
+}
+
+dim(resturants)
+unique(resturants$businesses.location$city)
+head(resturants)
 ```
+```{r}
+table(resturants$businesses.is_closed, useNA = "ifany")
+```
+
+```{r}
+hist(resturants$businesses.rating,xlab = "ratings out of 5", main = "Histogram of business ratings")
+```
+```{r}
+table(resturants$businesses.price, useNA = "ifany")
+```
+
+```{r}
+barplot(height = table(resturants$businesses.price,  useNA = "ifany"), 
+        names.arg = names(table(resturants$businesses.price, useNA = "ifany")))
+```
+```{r}
+hist(resturants$businesses.review_count, xlab = "Number of reviews", main = "Histogram of review Dist")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
