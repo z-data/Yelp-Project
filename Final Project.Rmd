@@ -111,11 +111,19 @@ covid_yelp_tbl = as_tibble(covid_flat)
 
 
 ```{r}
-
 combined_tbl = yelp_tbl %>% right_join(covid_yelp_tbl)
 # There are only two businesses with the same business id in the two tibbles.
-
-
+```
+```{r}
+businesses = data.frame()
+index = 1
+for (biz in covid_yelp_tbl$business_id){
+  temp = business_lookup_id(api_key = key, 
+                            business_id = biz)
+  temp_biz = bind_cols(as.data.frame(bind_cols(temp)[1,]), covid_yelp_tbl[index,])
+  businesses = bind_rows(businesses, temp_biz)
+  index = index + 1
+}
 ```
 
 
