@@ -9,7 +9,8 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 
 ```{r}
 # Load the package required
-library("rjson")
+library("jsonlite")
+library(tibble)
 library(yelpr)
 library(dplyr)
 
@@ -64,9 +65,12 @@ dim(resturants)
 unique(resturants$businesses.location$city)
 head(resturants)
 ```
+
+
 ```{r}
 table(resturants$businesses.is_closed, useNA = "ifany")
 ```
+LG: This is a problem - can we accurately conclude that NA fields are restaurants that have closed? 
 
 ```{r}
 hist(resturants$businesses.rating,xlab = "ratings out of 5", main = "Histogram of business ratings")
@@ -83,9 +87,36 @@ barplot(height = table(resturants$businesses.price,  useNA = "ifany"),
 hist(resturants$businesses.review_count, xlab = "Number of reviews", main = "Histogram of review Dist")
 ```
 
+Yelp Dataset for Academic purposed as of March 2020
 
 
+```{r}
+yelp_biz = jsonlite::stream_in(file( "/Users/lukasgeiger/Desktop/Columbia/SeniorYear/Spring2021/AppliedDataMining/FinalProject/yelp_dataset/yelp_academic_dataset_business.json"))
+yelp_flat = jsonlite::flatten(yelp_biz)
+yelp_tbl = as_tibble(yelp_flat)
+# However, most of this data is from BC, CO, FL, GA, MA, OH, OR, and TX (Not NY)
+table(yelp_tbl$state)
+# It is a very large dataset
+dim(yelp_tbl)
+names(yelp_tbl)
+#Include more than restaurants 
+yelp_tbl %>% mutate(categories = as.character(categories)) %>% select(categories)
+```
 
+```{r}
+COVID_data = jsonlite::stream_in(file( "/Users/lukasgeiger/Desktop/Columbia/SeniorYear/Spring2021/AppliedDataMining/FinalProject/covid_19_dataset_2020_06_10/yelp_academic_dataset_covid_features.json"))
+covid_flat = jsonlite::flatten(COVID_data)
+covid_yelp_tbl = as_tibble(covid_flat)
+```
+
+
+```{r}
+
+combined_tbl = yelp_tbl %>% right_join(covid_yelp_tbl)
+# There are only two businesses with the same business id in the two tibbles.
+
+
+```
 
 
 
