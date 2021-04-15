@@ -156,15 +156,31 @@ for (biz in covid_yelp_tbl$business_id[5001:8600]){
 
   businesses = bind_rows(businesses, temp_biz)
   #print(businesses)
-  #index = index + 1
+  index = index + 1
   #if (index %% 100 == 0) {
   #  print(index)
   #}
 }
-write.csv(businesses, "covid_yelp_biz.csv") 
-head(businesses)
 
+set_lists_to_chars <- function(x) {
+    if(class(x) == 'list') {
+    y <- paste(unlist(x[1]), sep='', collapse=', ')
+    } else {
+    y <- x 
+    }
+    return(y)
+}
+
+bizzes = businesses %>% mutate_all(function(x) NA)
+nms = names(businesses)
+for (i in 1:length(nms)) {
+  bizzes[,nms[i]] = apply(businesses[,i], 1, set_lists_to_chars)
+}
+
+head(bizzes)
+write.csv(bizzes, "covid_yelp_biz.csv") 
 ```
+
 
 
 ```{r}
