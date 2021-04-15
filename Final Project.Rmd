@@ -64,6 +64,8 @@ for (i in 0:99) {
 dim(resturants)
 unique(resturants$businesses.location$city)
 head(resturants)
+
+cor(resturants$businesses.rating, resturants$businesses.review_count)
 ```
 
 
@@ -85,6 +87,24 @@ barplot(height = table(resturants$businesses.price,  useNA = "ifany"),
 ```
 ```{r}
 hist(resturants$businesses.review_count, xlab = "Number of reviews", main = "Histogram of review Dist")
+```
+
+Methods just to get mine imported too
+```{r}
+#yelp_biz = jsonlite::stream_in(file( "/Users/zacmacintyre/Desktop/Git Folder/yelp_dataset/yelp_academic_dataset_business.json"))
+#yelp_flat = jsonlite::flatten(yelp_biz)
+#yelp_tbl = as_tibble(yelp_flat)
+# However, most of this data is from BC, CO, FL, GA, MA, OH, OR, and TX (Not NY)
+#table(yelp_tbl$state)
+# It is a very large dataset
+#dim(yelp_tbl)
+#names(yelp_tbl)
+#Include more than restaurants 
+#yelp_tbl %>% mutate(categories = as.character(categories)) %>% select(categories)
+
+#COVID_data = jsonlite::stream_in(file("/Users/zacmacintyre/Desktop/Git Folder/covid_19_dataset_2020_06_10/yelp_academic_dataset_covid_features.json"))
+#covid_flat = jsonlite::flatten(COVID_data)
+#covid_yelp_tbl = as_tibble(covid_flat)
 ```
 
 Yelp Dataset for Academic purposed as of March 2020
@@ -109,26 +129,76 @@ covid_flat = jsonlite::flatten(COVID_data)
 covid_yelp_tbl = as_tibble(covid_flat)
 ```
 
-
+This code doesnt actually work.  As you pull in data it is unfortunately in the wrong format a bunch.  I have corrected code down below.  It is still a 
 ```{r}
 combined_tbl = yelp_tbl %>% right_join(covid_yelp_tbl)
+covid_yelp_tbl = as.data.frame(covid_yelp_tbl)
 # There are only two businesses with the same business id in the two tibbles.
 ```
 ```{r}
 businesses = data.frame()
 index = 1
 # Add in offset to do 5000 daily pulls. Then save to csv file 
-for (biz in covid_yelp_tbl$business_id[1:4900]){
+for (biz in covid_yelp_tbl$business_id[1:10]){
   temp = business_lookup_id(api_key = key, 
                             business_id = biz)
+    
+  temp = temp[-which(names(temp) %in% c("photos", "photo", 'display_address'))]
   temp_biz = bind_cols(as.data.frame(bind_cols(temp)[1,]), covid_yelp_tbl[index,])
+  #temp_biz = temp_biz[,-which(names(temp_biz) %in% c("photos"))]
+
+  businesses = bind_rows(businesses, temp_biz)
+  #print(businesses)
+  index = index + 1
+  if (index %% 100 == 0) {
+    print(index)
+  }
+}
+
+
+```
+
+```{r}
+businesses = data.frame()
+index = 500
+# Add in offset to do 5000 daily pulls. Then save to csv file 
+for (biz in covid_yelp_tbl$business_id[500:1000]){
+  temp = business_lookup_id(api_key = key, 
+                            business_id = biz)
+    
+  for (i in names(temp)) {
+  t = temp[i][[1]]
+  if (length(t) > 1 & length(names(t)) > 1) {
+
+    for (j in names(t)) {
+      #print(j)
+      if (is.vector(t[j]) == T & length(t[j][[1]]) > 1) {
+        #print(t[j])
+        temp[i][[1]][j][[1]] = NA
+      }
+    }
+  } else if (length(t) > 1) {
+      temp = temp[-which(names(temp) %in% c(i))]
+    }
+  }
+  temp_biz = bind_cols(as.data.frame(bind_cols(temp)[1,]), covid_yelp_tbl[index,])
+
   businesses = bind_rows(businesses, temp_biz)
   index = index + 1
+  if (index %% 100 == 0) {
+    print(index)
+  }
 }
 ```
 
 
+```{r}
 
+```
+
+```{r}
+
+```
 
 
 
