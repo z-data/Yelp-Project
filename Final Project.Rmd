@@ -165,7 +165,9 @@ index = 500
 for (biz in covid_yelp_tbl$business_id[500:1000]){
   temp = business_lookup_id(api_key = key, 
                             business_id = biz)
-    
+  
+  #this for loop section goes into bad data entries and removes them
+  #too many different options depending on what the category was to make something nicer
   for (i in names(temp)) {
   t = temp[i][[1]]
   if (length(t) > 1 & length(names(t)) > 1) {
