@@ -68,6 +68,43 @@ head(resturants)
 cor(resturants$businesses.rating, resturants$businesses.review_count)
 ```
 
+```{r}
+businesses_test = data.frame()
+index = 1
+# Add in offset to do 5000 daily pulls. Then save to csv file 
+for (biz in covid_yelp_tbl$business_id[1:100]){
+  temp = business_lookup_id(api_key = key, 
+                            business_id = biz)
+  
+  #this for loop section goes into bad data entries and removes them
+  #too many different options depending on what the category was to make something nicer
+  for (i in names(temp)) {
+  t = temp[i][[1]]
+  if (length(t) > 1 & length(names(t)) > 1) {
+
+    for (j in names(t)) {
+      #print(j)
+      if (is.vector(t[j]) == T & length(t[j][[1]]) > 1) {
+        #print(t[j])
+        temp[i][[1]][j][[1]] = NA
+      }
+    }
+  } else if (length(t) > 1) {
+      temp = temp[-which(names(temp) %in% c(i))]
+    }
+  }
+  temp_biz = bind_cols(as.data.frame(bind_cols(temp)[1,]), covid_yelp_tbl[index,])
+
+  businesses_test = bind_rows(businesses_test, temp_biz)
+  index = index + 1
+  if (index %% 100 == 0) {
+    print(index)
+  }
+}
+
+head(businesses_test)
+```
+
 
 ```{r}
 table(resturants$businesses.is_closed, useNA = "ifany")
@@ -139,9 +176,9 @@ covid_yelp_tbl = as.data.frame(covid_yelp_tbl)
 
 ```{r}
 businesses = data.frame()
-index = 5001
+index = 1
 # Add in offset to do 5000 daily pulls. Then save to csv file 
-for (biz in covid_yelp_tbl$business_id[5001:8600]){
+for (biz in covid_yelp_tbl$business_id[1:100]){
   temp = business_lookup_id(api_key = key, 
                             business_id = biz)
   temp_biz = bind_cols(as.data.frame(t(cbind(temp))), covid_yelp_tbl[index,])
@@ -177,8 +214,33 @@ for (i in 1:length(nms)) {
   bizzes[,nms[i]] = apply(businesses[,i], 1, set_lists_to_chars)
 }
 
-head(bizzes)
 write.csv(bizzes, "covid_yelp_biz.csv") 
+biz = read.csv("covid_yelp_biz.csv")
+
+
+head(biz)
+
+biz = biz %>% mutate(price =  na_if(price, ""),
+                     photos =  na_if(photos, ""),
+                     business_id =  na_if(business_id, ""),
+                     highlights =  na_if(highlights, ""),
+                     transactions = na_if(transactions, ""),
+                     coordinates = na_if(coordinates, ""),
+                     location = na_if(location, ""),
+                     categories = na_if(categories, ""),
+                     display_phone = na_if(display_phone, ""),
+                     url = na_if(url, ""),
+                     image_url = na_if(image_url, ""),
+                     name = na_if(name, ""),
+                     alias = na_if(alias, ""),
+                     id = na_if(id, ""),
+                     hours = na_if(hours, ""),
+                     business_id = na_if(business_id, ""),
+                     Covid.Banner = na_if(Covid.Banner, ""),
+                     Temporary.Closed.Until = na_if(Temporary.Closed.Until, ""),
+                     Virtual.Services.Offered = na_if(Virtual.Services.Offered, ""),
+                     messaging = na_if(messaging, ""),
+                     special_hours = na_if(special_hours, ""))
 ```
 
 
@@ -191,45 +253,71 @@ write.csv(bizzes, "covid_yelp_biz.csv")
 ```
 
 ```{r}
-businesses = data.frame()
-index = 500
-# Add in offset to do 5000 daily pulls. Then save to csv file 
-for (biz in covid_yelp_tbl$business_id[500:1000]){
-  temp = business_lookup_id(api_key = key, 
-                            business_id = biz)
-  
-  #this for loop section goes into bad data entries and removes them
-  #too many different options depending on what the category was to make something nicer
-  for (i in names(temp)) {
-  t = temp[i][[1]]
-  if (length(t) > 1 & length(names(t)) > 1) {
+table(biz$is_closed , useNA = "ifany")
+```
+This is actually pretty good for us so far, we dont have crazy disproportionate classes 
 
-    for (j in names(t)) {
-      #print(j)
-      if (is.vector(t[j]) == T & length(t[j][[1]]) > 1) {
-        #print(t[j])
-        temp[i][[1]][j][[1]] = NA
-      }
-    }
-  } else if (length(t) > 1) {
-      temp = temp[-which(names(temp) %in% c(i))]
-    }
-  }
-  temp_biz = bind_cols(as.data.frame(bind_cols(temp)[1,]), covid_yelp_tbl[index,])
+```{r}
+hist(biz$review_count[biz$review_count < 100], breaks = 20, main = "Hist of reviews that have less than 100")
 
-  businesses = bind_rows(businesses, temp_biz)
-  index = index + 1
-  if (index %% 100 == 0) {
-    print(index)
-  }
-}
+hist(biz$review_count[biz$review_count > 100], breaks = 20, main = "Hist of reviews that have over 100")
+
+barplot(height = table(biz$rating,  useNA = "ifany"), 
+        names.arg = names(table(biz$rating, useNA = "ifany")), xlab = "rating of the biz")
+
+barplot(height = table(biz$price,  useNA = "ifany"), 
+        names.arg = names(table(biz$price, useNA = "ifany")), xlab = "prices of the biz")
+```
+```{r}
+# all the NAs in each col
+colSums(is.na(biz))
+
+#total missing values 
+percent_missing = sum(colSums(is.na(biz))) / (3600 *30)
+percent_missing
+
 ```
 
 
 
+```{r}
+#wrote this so you didnt have to change the actual DF
+#probably makes sense to do so and did it after
+prices = rep(NA, length(biz$price))
+length(prices)
 
+for (i in 1:length(biz$price)) {
+  if (!is.na(biz$price[i]) & biz$price[i] == '$') {
+    prices[i] = 1
+  } else if (!is.na(biz$price[i]) & biz$price[i] == '$$') {
+      prices[i] = 2
+  } else if (!is.na(biz$price[i]) & biz$price[i] == '$$$') {
+      prices[i] = 3
+  } else if (!is.na(biz$price[i]) & biz$price[i] == '$$$$') {
+      prices[i] = 4
+  }
+}
 
+```
 
+```{r}
+biz$price = prices 
+```
+
+```{r}
+#geting some of the cor for things that are numeric
+cor(biz$rating, prices, use = "pairwise.complete.obs")
+cor(biz$rating, biz$review_count, use = "pairwise.complete.obs")
+cor(biz$price, biz$review_count, use = "pairwise.complete.obs")
+```
+
+```{r}
+#geting some of the cor for things that are numeric
+#specifically looking at it with is the business closed
+cor(biz$is_closed, biz$price, use = "pairwise.complete.obs")
+cor(biz$is_closed, biz$review_count, use = "pairwise.complete.obs")
+cor(biz$is_closed, biz$rating, use = "pairwise.complete.obs")
+```
 
 
 
