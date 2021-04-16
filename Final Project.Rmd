@@ -241,6 +241,8 @@ biz = biz %>% mutate(price =  na_if(price, ""),
                      Virtual.Services.Offered = na_if(Virtual.Services.Offered, ""),
                      messaging = na_if(messaging, ""),
                      special_hours = na_if(special_hours, ""))
+
+biz$Virtual.Services.Offered = as.logical(gsub('offers_virtual_consultations|offers_virtual_tours|offers_virtual_classes', 'TRUE', biz$Virtual.Services.Offered))
 ```
 
 
@@ -319,6 +321,27 @@ cor(biz$is_closed, biz$review_count, use = "pairwise.complete.obs")
 cor(biz$is_closed, biz$rating, use = "pairwise.complete.obs")
 ```
 
+```{r}
+#running a logistic regression on the data that has numeric or boolean values 
+y = biz$is_closed
+x1 = biz$review_count
+x2 = biz$rating
+x3 = biz$price
+x4 = biz$delivery.or.takeout
+x5 = biz$Grubhub.enabled
+x6 = biz$Virtual.Services.Offered
+
+#i am goiing to have to maybe make a new way to test/train split for evaluation
+#but it works for the moment
+train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
+mod <- glm(y ~ x1+x2+x3+x4+x5+x6, family=binomial(link="logit"),
+           subset=train)
+test_probs <- predict(mod, newdata=data.frame(x=x[!train]), type="response")
+
+test_pred = test_probs > .5
+
+#still need a way to evaluate the model
+```
 
 
 
