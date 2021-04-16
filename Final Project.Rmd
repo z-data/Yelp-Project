@@ -139,9 +139,9 @@ covid_yelp_tbl = as.data.frame(covid_yelp_tbl)
 
 ```{r}
 businesses = data.frame()
-index = 5001
+index = 13001
 # Add in offset to do 5000 daily pulls. Then save to csv file 
-for (biz in covid_yelp_tbl$business_id[5001:8600]){
+for (biz in covid_yelp_tbl$business_id[13001:17000]){
   temp = business_lookup_id(api_key = key, 
                             business_id = biz)
   temp_biz = bind_cols(as.data.frame(t(cbind(temp))), covid_yelp_tbl[index,])
@@ -161,7 +161,11 @@ for (biz in covid_yelp_tbl$business_id[5001:8600]){
   #  print(index)
   #}
 }
+head(businesses)
+```
 
+```{r}
+# this assumes that all columns will have the same length. Rather there will be some columns that have NA fields. Need to write a function that goes line by line through each row in the data frame and unlist and combines them otherwise write NA. TODO
 set_lists_to_chars <- function(x) {
     if(class(x) == 'list') {
     y <- paste(unlist(x[1]), sep='', collapse=', ')
@@ -171,14 +175,25 @@ set_lists_to_chars <- function(x) {
     return(y)
 }
 
-bizzes = businesses %>% mutate_all(function(x) NA)
+businesses = saved_biz
 nms = names(businesses)
-for (i in 1:length(nms)) {
-  bizzes[,nms[i]] = apply(businesses[,i], 1, set_lists_to_chars)
+col = c()
+for (row in businesses[,1]) {
+  col = c(col,set_lists_to_chars(row))
+}
+bizzes = matrix(ncol=length(nms), nrow=length(col))
+colnames(bizzes) = nms
+bizzes[,1] = col
+for (row in 1:nrow(businesses)){
+  for (col in 2:length(businesses)) {
+    bizzes[row,col] = set_lists_to_chars(businesses[row,col])
+  }
 }
 
+bizzes = as.data.frame(bizzes)
 head(bizzes)
-write.csv(bizzes, "covid_yelp_biz.csv") 
+
+write.table(bizzes, "covid_yelp_biz.csv",append = TRUE,sep = ",") 
 ```
 
 
