@@ -198,7 +198,9 @@ for (biz in covid_yelp_tbl$business_id[13001:17000]){
   #  print(index)
   #}
 }
-head(businesses)
+# check to see if error
+tail(businesses$error)
+
 ```
 
 ```{r}
@@ -212,7 +214,6 @@ set_lists_to_chars <- function(x) {
     return(y)
 }
 
-businesses = saved_biz
 nms = names(businesses)
 col = c()
 for (row in businesses[,1]) {
@@ -226,16 +227,15 @@ for (row in 1:nrow(businesses)){
     bizzes[row,col] = set_lists_to_chars(businesses[row,col])
   }
 }
-
+nrow(bizzes)
 bizzes = as.data.frame(bizzes)
-head(bizzes)
+tail(bizzes)
 
 write.table(bizzes, "covid_yelp_biz.csv",append = TRUE,sep = ",") 
 ```
 
 ```{r}
 biz = read.csv("covid_yelp_biz.csv")
-
 
 head(biz)
 
