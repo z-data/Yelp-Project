@@ -176,9 +176,9 @@ covid_yelp_tbl = as.data.frame(covid_yelp_tbl)
 
 ```{r}
 businesses = data.frame()
-index = 13001
+index = 1
 # Add in offset to do 5000 daily pulls. Then save to csv file 
-for (biz in covid_yelp_tbl$business_id[13001:17000]){
+for (biz in covid_yelp_tbl$business_id[1:5000]){
   temp = business_lookup_id(api_key = key, 
                             business_id = biz)
   temp_biz = bind_cols(as.data.frame(t(cbind(temp))), covid_yelp_tbl[index,])
@@ -264,6 +264,47 @@ biz = biz %>% mutate(price =  na_if(price, ""),
 biz$Virtual.Services.Offered = as.logical(gsub('offers_virtual_consultations|offers_virtual_tours|offers_virtual_classes', 'TRUE', biz$Virtual.Services.Offered))
 ```
 
+```{r}
+#getting covid cases data 
+#it was in a weird format with lots of blank spaces 
+case = read.csv("covid cases.csv")
+
+covid_cases = data.frame()
+for (i in 1:51) {
+  row = case[i*4 + 1,1:2]
+  covid_cases = bind_rows(covid_cases, row)
+}
+ 
+covid_cases$Cases = as.numeric(gsub('\\,', '', covid_cases$Cases)) 
+#head(covid_cases)
+
+
+# reading in vaccine data 
+vax = read.csv("vaccines.csv")
+vaxes = data.frame()
+for (i in 1:51) {
+  
+  c1 = vax[i*2 -1,1]
+  c2 = vax[i*2,2:4]
+  row = bind_cols(c1,c2)
+  vaxes = bind_rows(vaxes, row)
+}
+
+names(vaxes) = c("state", "Doses_given", "Fully_vaccinated", "Population_fully_vaccinated")
+
+vaxes = vaxes %>% mutate(Doses_given = as.numeric(gsub('\\,', '', Doses_given)),
+                         Fully_vaccinated = as.numeric(gsub('\\,', '', Fully_vaccinated)),
+                         Population_fully_vaccinated = as.numeric(gsub('\\%', '',
+                                                                       Population_fully_vaccinated)))
+
+#head(vaxes)
+```
+```{r}
+# scaling the total cases between 1 and 0 
+covid_cases$Cases = (covid_cases$Cases - min(covid_cases$Cases)) / (max(covid_cases$Cases) - min(covid_cases$Cases))
+
+head(covid_cases)
+```
 
 
 ```{r}
@@ -363,6 +404,9 @@ test_pred = test_probs > .5
 ```
 
 
+```{r}
+
+```
 
 
 
