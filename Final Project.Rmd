@@ -290,20 +290,25 @@ for (i in 1:51) {
   vaxes = bind_rows(vaxes, row)
 }
 
-names(vaxes) = c("state", "Doses_given", "Fully_vaccinated", "Population_fully_vaccinated")
+names(vaxes) = c("Location", "Doses_given", "Fully_vaccinated", "Population_fully_vaccinated")
 
 vaxes = vaxes %>% mutate(Doses_given = as.numeric(gsub('\\,', '', Doses_given)),
                          Fully_vaccinated = as.numeric(gsub('\\,', '', Fully_vaccinated)),
                          Population_fully_vaccinated = as.numeric(gsub('\\%', '',
                                                                        Population_fully_vaccinated)))
 
-#head(vaxes)
+#merging into 1 DF
+covid = merge(vaxes, covid_cases, by = "Location")
+head(covid)
 ```
 ```{r}
-# scaling the total cases between 1 and 0 
-covid_cases$Cases = (covid_cases$Cases - min(covid_cases$Cases)) / (max(covid_cases$Cases) - min(covid_cases$Cases))
+#feature creation section 
+covid$Population_fully_vaccinated = covid$Population_fully_vaccinated / 100
+covid$feature = covid$Cases * (1 - covid$Population_fully_vaccinated) 
 
-head(covid_cases)
+#scaling the feature between 0 and 1 
+covid$scaled_feature = (covid$feature - min(covid$feature)) / (max(covid$feature) - min(covid$feature))
+
 ```
 
 
