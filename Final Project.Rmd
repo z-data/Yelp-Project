@@ -13,6 +13,7 @@ library("jsonlite")
 library(tibble)
 library(yelpr)
 library(dplyr)
+library(stringr)
 
 # Get my API key
 key = readLines("Yelp API.txt", warn = F)
@@ -239,6 +240,14 @@ biz = read.csv("covid_yelp_biz.csv")
 
 head(biz)
 
+# remove all Canandian businesses 
+biz = biz[- grep("CA", biz$location),]
+
+# remove all with error not found
+biz = biz[- grep("NOT_FOUND", biz$error),]
+biz = biz[- grep("BUSINESS_UNAVAILABLE", biz$error),]
+
+
 biz = biz %>% mutate(price =  na_if(price, ""),
                      photos =  na_if(photos, ""),
                      business_id =  na_if(business_id, ""),
@@ -308,6 +317,39 @@ covid$feature = covid$Cases * (1 - covid$Population_fully_vaccinated)
 
 #scaling the feature between 0 and 1 
 covid$scaled_feature = (covid$feature - min(covid$feature)) / (max(covid$feature) - min(covid$feature))
+
+```
+```{r}
+# Matching country and State codes so we can merge on state
+
+pattern = "[[:upper:]]{2},"
+
+biz = biz %>% rowwise() %>% mutate(Code = str_remove(paste(
+  unique(
+  str_sub(unlist(str_extract_all(location,pattern)), 
+          end = -2)
+  ), collapse=" "), pattern = "US"))
+
+
+# Get state Codes
+state_abrev = read.csv("state_abbrev.csv")
+state_abrev = state_abrev %>% mutate(Location = State) %>% select("Location", "Code") 
+covid = merge(covid, state_abrev, by = "Location")
+
+# Merge 
+cobiz = data.frame()
+for (i in 1:nrow(biz)) {
+  if (!is.na(biz[i,"id"]) & 
+      length(str_split(biz[i,"Code"], , pattern = "  ")[[1]]) == 1 & 
+      biz[i,"Code"]!="NA") 
+    {
+    row = cbind(biz[i,], 
+                covid[which(covid$Code == str_trim(unlist(biz[i,"Code"]))),]) %>%
+      select(!Code)
+    cobiz = bind_rows(cobiz, row)
+  }
+}
+biz = cobiz
 
 ```
 
