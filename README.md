@@ -5,6 +5,7 @@ US local businesses are some of the hardest-hit industries in the COVID-19 pande
 
 ### Folder descriptions
 The Final Project.rmd file is the code we wrote for this project
+Final Project - applied data mining - pdf file is the final write up of our project
 
 
 ### Data 
