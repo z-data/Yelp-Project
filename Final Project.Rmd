@@ -14,6 +14,7 @@ library(tibble)
 library(yelpr)
 library(dplyr)
 library(stringr)
+library(ggplot2)
 
 # Get my API key
 key = readLines("Yelp API.txt", warn = F)
@@ -376,6 +377,10 @@ barplot(height = table(biz$rating,  useNA = "ifany"),
 
 barplot(height = table(biz$price,  useNA = "ifany"), 
         names.arg = names(table(biz$price, useNA = "ifany")), xlab = "prices of the biz")
+
+ggplot(biz, aes(x = rating, group = is_closed, fill = is_closed)) + geom_histogram(position="dodge",binwidth=0.25)+theme_bw() + labs(title = "Histogram Business Rating by Open/Closed")
+
+table(biz$is_closed)
 ```
 ```{r}
 # all the NAs in each col
@@ -429,21 +434,35 @@ cor(biz$is_closed, biz$rating, use = "pairwise.complete.obs")
 ```
 
 ```{r}
+# Data cleanup 
+biz = biz %>% rowwise() %>% mutate(delivery.or.takeout = ifelse(delivery.or.takeout == "TRUE" | delivery.or.takeout == "FALSE", delivery.or.takeout, NA))
+
+biz = biz %>% rowwise() %>% mutate(Grubhub.enabled = ifelse(Grubhub.enabled == "TRUE" | Grubhub.enabled == "FALSE", Grubhub.enabled, NA))
+```
+
+
+```{r}
 #running a logistic regression on the data that has numeric or boolean values 
 y = biz$is_closed
 x1 = biz$review_count
 x2 = biz$rating
 x3 = biz$price
-x4 = biz$delivery.or.takeout
+x4 = biz$delivery.or.takeout 
 x5 = biz$Grubhub.enabled
 x6 = biz$Virtual.Services.Offered
+x7 = biz$Population_fully_vaccinated
 
 #i am goiing to have to maybe make a new way to test/train split for evaluation
 #but it works for the moment
 train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
-mod <- glm(y ~ x1+x2+x3+x4+x5+x6, family=binomial(link="logit"),
+mod <- glm(y ~ x1+x2+x3+x4+x5+x6+x7, family=binomial(link="logit"),
            subset=train)
-test_probs <- predict(mod, newdata=data.frame(x=x[!train]), type="response")
+test = data.frame(x1,x2,x3,x4,x5,x6,x7)[!train,]
+test_probs <- predict(mod, newdata=data.frame(x=test), type="response")
+
+summary(mod)
+
+plot(mod)
 
 test_pred = test_probs > .5
 
