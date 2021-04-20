@@ -2,10 +2,8 @@
 title: "R Notebook"
 output: html_notebook
 ---
-
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+Zac Macintyre (Zim2103)
+Lukas Geiger (lg2960)	
 
 ```{r}
 # Load the package required
@@ -14,15 +12,13 @@ library(tibble)
 library(yelpr)
 library(dplyr)
 library(stringr)
-
 library(ggplot2)
 
 # Get my API key
 key = readLines("Yelp API.txt", warn = F)
 
-
-#I tried a few times and it seems borough by borough is best 
-#Manhattan restaurant calls 
+# It seems borough by borough is best 
+# Manhattan restaurant calls 
 resturants = data.frame()
 for (i in 0:99) {
   
@@ -72,6 +68,7 @@ cor(resturants$businesses.rating, resturants$businesses.review_count)
 ```
 
 ```{r}
+# Initial Yelp API business ids from first iteration 
 businesses_test = data.frame()
 index = 1
 # Add in offset to do 5000 daily pulls. Then save to csv file 
@@ -79,8 +76,6 @@ for (biz in covid_yelp_tbl$business_id[1:100]){
   temp = business_lookup_id(api_key = key, 
                             business_id = biz)
   
-  #this for loop section goes into bad data entries and removes them
-  #too many different options depending on what the category was to make something nicer
   for (i in names(temp)) {
   t = temp[i][[1]]
   if (length(t) > 1 & length(names(t)) > 1) {
@@ -112,11 +107,11 @@ head(businesses_test)
 ```{r}
 table(resturants$businesses.is_closed, useNA = "ifany")
 ```
-LG: This is a problem - can we accurately conclude that NA fields are restaurants that have closed? 
 
 ```{r}
 hist(resturants$businesses.rating,xlab = "ratings out of 5", main = "Histogram of business ratings")
 ```
+
 ```{r}
 table(resturants$businesses.price, useNA = "ifany")
 ```
@@ -125,32 +120,15 @@ table(resturants$businesses.price, useNA = "ifany")
 barplot(height = table(resturants$businesses.price,  useNA = "ifany"), 
         names.arg = names(table(resturants$businesses.price, useNA = "ifany")))
 ```
+
 ```{r}
 hist(resturants$businesses.review_count, xlab = "Number of reviews", main = "Histogram of review Dist")
 ```
 
-Methods just to get mine imported too
-```{r}
-#yelp_biz = jsonlite::stream_in(file( "/Users/zacmacintyre/Desktop/Git Folder/yelp_dataset/yelp_academic_dataset_business.json"))
-#yelp_flat = jsonlite::flatten(yelp_biz)
-#yelp_tbl = as_tibble(yelp_flat)
-# However, most of this data is from BC, CO, FL, GA, MA, OH, OR, and TX (Not NY)
-#table(yelp_tbl$state)
-# It is a very large dataset
-#dim(yelp_tbl)
-#names(yelp_tbl)
-#Include more than restaurants 
-#yelp_tbl %>% mutate(categories = as.character(categories)) %>% select(categories)
-
-#COVID_data = jsonlite::stream_in(file("/Users/zacmacintyre/Desktop/Git Folder/covid_19_dataset_2020_06_10/yelp_academic_dataset_covid_features.json"))
-#covid_flat = jsonlite::flatten(COVID_data)
-#covid_yelp_tbl = as_tibble(covid_flat)
-```
-
 Yelp Dataset for Academic purposed as of March 2020
 
-
 ```{r}
+# Second iteration - Yelp March 2020 dataset
 yelp_biz = jsonlite::stream_in(file( "/Users/lukasgeiger/Desktop/Columbia/SeniorYear/Spring2021/AppliedDataMining/FinalProject/yelp_dataset/yelp_academic_dataset_business.json"))
 yelp_flat = jsonlite::flatten(yelp_biz)
 yelp_tbl = as_tibble(yelp_flat)
@@ -159,25 +137,20 @@ table(yelp_tbl$state)
 # It is a very large dataset
 dim(yelp_tbl)
 names(yelp_tbl)
-#Include more than restaurants 
+#Includes more than restaurants 
 yelp_tbl %>% mutate(categories = as.character(categories)) %>% select(categories)
 ```
 
 ```{r}
+# Yelp COVID 19 Addendum data
 COVID_data = jsonlite::stream_in(file( "/Users/lukasgeiger/Desktop/Columbia/SeniorYear/Spring2021/AppliedDataMining/FinalProject/covid_19_dataset_2020_06_10/yelp_academic_dataset_covid_features.json"))
 covid_flat = jsonlite::flatten(COVID_data)
 covid_yelp_tbl = as_tibble(covid_flat)
 ```
 
-This code doesnt actually work.  As you pull in data it is unfortunately in the wrong format a bunch.  I have corrected code down below.  It is still a 
-```{r}
-combined_tbl = yelp_tbl %>% right_join(covid_yelp_tbl)
-covid_yelp_tbl = as.data.frame(covid_yelp_tbl)
-# There are only two businesses with the same business id in the two tibbles.
-```
-
 
 ```{r}
+# Merge Yelp COVID Addendum data with General Yelp API data. Done in batches of 5000 to not break API limit
 businesses = data.frame()
 index = 1
 # Add in offset to do 5000 daily pulls. Then save to csv file 
@@ -185,29 +158,20 @@ for (biz in covid_yelp_tbl$business_id[1:5000]){
   temp = business_lookup_id(api_key = key, 
                             business_id = biz)
   temp_biz = bind_cols(as.data.frame(t(cbind(temp))), covid_yelp_tbl[index,])
-#for (biz in covid_yelp_tbl$business_id[1:10]){
-#  temp = business_lookup_id(api_key = key, 
-#                            business_id = biz)
-    
-#  temp = temp[-which(names(temp) %in% c("photos", "photo", 'display_address'))]
-#  temp_biz = bind_cols(as.data.frame(bind_cols(temp)[1,]), covid_yelp_tbl[index,])
-  #temp_biz = temp_biz[,-which(names(temp_biz) %in% c("photos"))]
-
-
   businesses = bind_rows(businesses, temp_biz)
-  #print(businesses)
   index = index + 1
   #if (index %% 100 == 0) {
   #  print(index)
   #}
 }
+
 # check to see if error
 tail(businesses$error)
-
 ```
 
 ```{r}
-# this assumes that all columns will have the same length. Rather there will be some columns that have NA fields. Need to write a function that goes line by line through each row in the data frame and unlist and combines them otherwise write NA. TODO
+# Convert DF into an easier format. Right now everything is in a list. 
+
 set_lists_to_chars <- function(x) {
     if(class(x) == 'list') {
     y <- paste(unlist(x[1]), sep='', collapse=', ')
@@ -234,13 +198,14 @@ nrow(bizzes)
 bizzes = as.data.frame(bizzes)
 tail(bizzes)
 
+# Append to file so both of us can pull from API at same time
 write.table(bizzes, "covid_yelp_biz.csv",append = TRUE,sep = ",") 
 ```
 
 ```{r}
-biz = read.csv("covid_yelp_biz.csv")
+# Data Exploration and cleanup
 
-head(biz)
+biz = read.csv("covid_yelp_biz.csv")
 
 # remove all Canandian businesses 
 biz = biz[- grep("CA", biz$location),]
@@ -277,7 +242,9 @@ biz$Virtual.Services.Offered = as.logical(gsub('offers_virtual_consultations|off
 ```
 
 ```{r}
-#getting covid cases data 
+# Feature Generation 
+
+# getting covid cases data 
 #it was in a weird format with lots of blank spaces 
 case = read.csv("covid cases.csv")
 
@@ -288,8 +255,6 @@ for (i in 1:51) {
 }
  
 covid_cases$Cases = as.numeric(gsub('\\,', '', covid_cases$Cases)) 
-#head(covid_cases)
-
 
 # reading in vaccine data 
 vax = read.csv("vaccines.csv")
@@ -311,8 +276,9 @@ vaxes = vaxes %>% mutate(Doses_given = as.numeric(gsub('\\,', '', Doses_given)),
 
 #merging into 1 DF
 covid = merge(vaxes, covid_cases, by = "Location")
-head(covid)
+
 ```
+
 ```{r}
 #feature creation section 
 covid$Population_fully_vaccinated = covid$Population_fully_vaccinated / 100
@@ -322,6 +288,7 @@ covid$feature = covid$Cases * (1 - covid$Population_fully_vaccinated)
 covid$scaled_feature = (covid$feature - min(covid$feature)) / (max(covid$feature) - min(covid$feature))
 
 ```
+
 ```{r}
 # Matching country and State codes so we can merge on state
 
@@ -339,7 +306,7 @@ state_abrev = read.csv("state_abbrev.csv")
 state_abrev = state_abrev %>% mutate(Location = State) %>% select("Location", "Code") 
 covid = merge(covid, state_abrev, by = "Location")
 
-# Merge 
+# Merge (biz would not merge on State code because not equal number of rows so we did it using for loop)
 cobiz = data.frame()
 for (i in 1:nrow(biz)) {
   if (!is.na(biz[i,"id"]) & 
@@ -356,24 +323,20 @@ biz = cobiz
 biz = cobiz[1:3600,]
 ```
 
-
 ```{r}
-# Feature engineering - highly correlated things turn into one variable, maybe combine # of dollar signs with business rating, to reduce dimensions. Common on interviews. Ratings are variable to the number of rating recieved. 10 ratings will swing a lot while 1000 ratings will swing less with each additional rating. 
-# Another option is to get simple sentiment analysis of reviews distilled to a number. 
-# Could also add a density mapping based on the city the restaurant is in. Or a score of how strict the city is iwth COVID. 
+# Data cleanup 
+biz = biz %>% rowwise() %>% mutate(delivery.or.takeout = ifelse(delivery.or.takeout == "TRUE" | delivery.or.takeout == "FALSE", delivery.or.takeout, NA))
 
+biz = biz %>% rowwise() %>% mutate(Grubhub.enabled = ifelse(Grubhub.enabled == "TRUE" | Grubhub.enabled == "FALSE", Grubhub.enabled, NA))
 ```
 
 ```{r}
 table(biz$is_closed , useNA = "ifany")
-
+# This is actually pretty good for us so far, we dont have crazy disproportionate classes 
 ```
-This is actually pretty good for us so far, we dont have crazy disproportionate classes 
+
 
 ```{r}
-#hist(biz$review_count[biz$review_count < 100], breaks = 20, main = "Hist of reviews that have less than 100")
-
-#hist(biz$review_count[biz$review_count > 100], breaks = 20, main = "Hist of reviews that have over 100")
 
 barplot(height = table(biz$rating,  useNA = "ifany"), 
         names.arg = names(table(biz$rating, useNA = "ifany")), xlab = "rating of the biz")
@@ -381,7 +344,6 @@ barplot(height = table(biz$rating,  useNA = "ifany"),
 barplot(height = table(biz$price,  useNA = "ifany"), 
         names.arg = names(table(biz$price, useNA = "ifany")), xlab = "prices of the biz")
 
-<<<<<<< HEAD
 ggplot(biz, aes(x = rating, group = is_closed, fill = is_closed)) + geom_histogram(position="dodge",binwidth=0.25)+theme_bw() + labs(title = "Histogram Business Rating by Open/Closed")
 
 table(biz$is_closed)
@@ -396,15 +358,12 @@ ggplot(data = biz[biz$review_count > 100,]) +
   theme(plot.title = element_text(hjust = 0.5)) + 
   labs(title = "Histogram of Review counts > 100")
 
-head(biz)
-dim(biz)
-unique(biz$price)
 ```
 
 ```{r}
 # all the NAs in each col
 colSums(is.na(biz[,1:30]))
-dim(biz[,1:30])
+
 #total missing values 
 percent_missing = sum(colSums(is.na(biz[,1:29]))) / (8177 *30)
 percent_missing
@@ -452,16 +411,10 @@ cor(biz$is_closed, biz$review_count, use = "pairwise.complete.obs")
 cor(biz$is_closed, biz$rating, use = "pairwise.complete.obs")
 ```
 
-```{r}
-# Data cleanup 
-biz = biz %>% rowwise() %>% mutate(delivery.or.takeout = ifelse(delivery.or.takeout == "TRUE" | delivery.or.takeout == "FALSE", delivery.or.takeout, NA))
-
-biz = biz %>% rowwise() %>% mutate(Grubhub.enabled = ifelse(Grubhub.enabled == "TRUE" | Grubhub.enabled == "FALSE", Grubhub.enabled, NA))
-```
-
 
 ```{r}
-#running a logistic regression on the data that has numeric or boolean values 
+# Get data ready for Model
+# running a logistic regression on the data that has numeric or boolean values 
 y = biz$is_closed
 x1 = biz$review_count
 x2 = biz$rating
@@ -469,9 +422,7 @@ x3 = biz$price
 x4 = biz$delivery.or.takeout 
 x5 = biz$Grubhub.enabled
 x6 = biz$Virtual.Services.Offered
-<<<<<<< HEAD
 x7 = biz$Population_fully_vaccinated
-=======
 x7 = biz$scaled_feature
 
 X = as.data.frame(cbind(y, x1,x2,x3,x4,x5,x6,x7))
@@ -484,26 +435,20 @@ X = X %>% mutate(x1 = as.numeric(x1),
                  x7 = as.numeric(x7),
                  y = as.logical(y))
 
-#corelation of everything together
+#correlation of everything together
 cor(X, use = "pairwise.complete.obs")
-
-
-
 ```
->>>>>>> b338e80b19d7d42da478d5d6596609681c616acf
 
 
 ```{r}
-#i am goiing to have to maybe make a new way to test/train split for evaluation
-#but it works for the moment
-<<<<<<< HEAD
+# Train the model
+
 train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
 mod <- glm(y ~ x1+x2+x3+x4+x5+x6+x7, family=binomial(link="logit"),
            subset=train)
 test = data.frame(x1,x2,x3,x4,x5,x6,x7)[!train,]
 test_probs <- predict(mod, newdata=data.frame(x=test), type="response")
 
-#train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
 idx = sample(1:nrow(X), (nrow(X) * .8), replace = F)
 train = X[idx,]
 
@@ -537,12 +482,12 @@ na
 ```
 
 ```{r}
+# Tuning Model
 #removing highly corelated variables
 y = biz$is_closed
 x1 = biz$review_count
 x2 = biz$rating
 x3 = biz$price
-#x4 = biz$delivery.or.takeout
 x5 = biz$Grubhub.enabled
 x6 = biz$Virtual.Services.Offered
 x7 = biz$scaled_feature
@@ -556,24 +501,19 @@ X = X %>% mutate(x1 = as.numeric(x1),
                  x7 = as.numeric(x7),
                  y = as.logical(y))
 
-#corelation of everything together
+#correlation of everything together
 cor(X, use = "pairwise.complete.obs")
 ```
 
 
 ```{r}
-#i am goiing to have to maybe make a new way to test/train split for evaluation
-#but it works for the moment
-#train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
+# Train tuned model
 idx = sample(1:nrow(X), (nrow(X) * .8), replace = F)
 train = X[idx,]
 
 test = X[-idx,1:6]
 mod <- glm(y ~ ., data = train, family=binomial(link="logit"))
 summary(mod)
-
-
-
 ```
 
 
@@ -611,10 +551,9 @@ na
 ```
 
 
-
-
-
 ```{r}
+# A further look on business reviews 
+
 #looking at the hold reviews above 200
 X_review = X[X$x1 > 200,]
 
