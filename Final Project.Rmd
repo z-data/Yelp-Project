@@ -14,6 +14,7 @@ library(tibble)
 library(yelpr)
 library(dplyr)
 library(stringr)
+library("ggplot2")
 
 # Get my API key
 key = readLines("Yelp API.txt", warn = F)
@@ -271,6 +272,7 @@ biz = biz %>% mutate(price =  na_if(price, ""),
                      special_hours = na_if(special_hours, ""))
 
 biz$Virtual.Services.Offered = as.logical(gsub('offers_virtual_consultations|offers_virtual_tours|offers_virtual_classes', 'TRUE', biz$Virtual.Services.Offered))
+
 ```
 
 ```{r}
@@ -350,7 +352,7 @@ for (i in 1:nrow(biz)) {
   }
 }
 biz = cobiz
-
+biz = cobiz[1:3600,]
 ```
 
 
@@ -363,26 +365,42 @@ biz = cobiz
 
 ```{r}
 table(biz$is_closed , useNA = "ifany")
+
 ```
 This is actually pretty good for us so far, we dont have crazy disproportionate classes 
 
 ```{r}
-hist(biz$review_count[biz$review_count < 100], breaks = 20, main = "Hist of reviews that have less than 100")
+#hist(biz$review_count[biz$review_count < 100], breaks = 20, main = "Hist of reviews that have less than 100")
 
-hist(biz$review_count[biz$review_count > 100], breaks = 20, main = "Hist of reviews that have over 100")
+#hist(biz$review_count[biz$review_count > 100], breaks = 20, main = "Hist of reviews that have over 100")
 
 barplot(height = table(biz$rating,  useNA = "ifany"), 
         names.arg = names(table(biz$rating, useNA = "ifany")), xlab = "rating of the biz")
 
 barplot(height = table(biz$price,  useNA = "ifany"), 
         names.arg = names(table(biz$price, useNA = "ifany")), xlab = "prices of the biz")
+
+
+ggplot(data = biz[biz$review_count < 100,]) +
+  geom_histogram(mapping = aes(x = review_count), fill = "dodgerblue2") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Histogram of Review counts < 100")
+
+ggplot(data = biz[biz$review_count > 100,]) +
+  geom_histogram(mapping = aes(x = review_count), fill = "dodgerblue2") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  labs(title = "Histogram of Review counts > 100")
+
+head(biz)
+dim(biz)
+unique(biz$price)
 ```
 ```{r}
 # all the NAs in each col
-colSums(is.na(biz))
-
+colSums(is.na(biz[,1:30]))
+dim(biz[,1:30])
 #total missing values 
-percent_missing = sum(colSums(is.na(biz))) / (3600 *30)
+percent_missing = sum(colSums(is.na(biz[,1:29]))) / (8177 *30)
 percent_missing
 
 ```
@@ -437,34 +455,156 @@ x3 = biz$price
 x4 = biz$delivery.or.takeout
 x5 = biz$Grubhub.enabled
 x6 = biz$Virtual.Services.Offered
+x7 = biz$scaled_feature
 
-#i am goiing to have to maybe make a new way to test/train split for evaluation
-#but it works for the moment
-train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
-mod <- glm(y ~ x1+x2+x3+x4+x5+x6, family=binomial(link="logit"),
-           subset=train)
-test_probs <- predict(mod, newdata=data.frame(x=x[!train]), type="response")
+X = as.data.frame(cbind(y, x1,x2,x3,x4,x5,x6,x7))
+X = X %>% mutate(x1 = as.numeric(x1),
+                 x2 = as.numeric(x2),
+                 x3 = as.numeric(x3),
+                 x4 = as.logical(x4),
+                 x5 = as.logical(x5),
+                 x6 = as.logical(x6),
+                 x7 = as.numeric(x7),
+                 y = as.logical(y))
 
-test_pred = test_probs > .5
+#corelation of everything together
+cor(X, use = "pairwise.complete.obs")
 
-#still need a way to evaluate the model
+
+
 ```
 
 
 ```{r}
+#i am goiing to have to maybe make a new way to test/train split for evaluation
+#but it works for the moment
+#train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
+idx = sample(1:nrow(X), (nrow(X) * .8), replace = F)
+train = X[idx,]
 
+test = X[-idx,1:6]
+mod <- glm(y ~ ., data = train, family=binomial(link="logit"))
+summary(mod)
+
+
+# predictions from the model 
+test_probs <- predict(mod, newdata= test, type="response")
+test_pred = test_probs > .5
+correct = X[-idx, 7]
+
+
+test_pred[1:10]
+correct[1:10]
+score = 0
+na = 0
+
+for (i in 1:length(correct)) {
+  
+  if (is.na(test_pred[i])) {
+    na = na + 1
+    
+  } else if (!is.na(test_pred) & (test_pred[i] == correct[i])) {
+  score = score + 1
+  }
+}
+
+score
+na
+```
+
+```{r}
+#removing highly corelated variables
+y = biz$is_closed
+x1 = biz$review_count
+x2 = biz$rating
+x3 = biz$price
+#x4 = biz$delivery.or.takeout
+x5 = biz$Grubhub.enabled
+x6 = biz$Virtual.Services.Offered
+x7 = biz$scaled_feature
+
+X = as.data.frame(cbind(y, x1,x2,x3,x5,x6,x7))
+X = X %>% mutate(x1 = as.numeric(x1),
+                 x2 = as.numeric(x2),
+                 x3 = as.numeric(x3),
+                 x5 = as.logical(x5),
+                 x6 = as.logical(x6),
+                 x7 = as.numeric(x7),
+                 y = as.logical(y))
+
+#corelation of everything together
+cor(X, use = "pairwise.complete.obs")
+```
+
+
+```{r}
+#i am goiing to have to maybe make a new way to test/train split for evaluation
+#but it works for the moment
+#train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
+idx = sample(1:nrow(X), (nrow(X) * .8), replace = F)
+train = X[idx,]
+
+test = X[-idx,1:6]
+mod <- glm(y ~ ., data = train, family=binomial(link="logit"))
+summary(mod)
+
+
+
+```
+
+
+```{r}
+signif = list( review_count = 4, rating = 0, price = 5, grubhub = 5, virtual = 0 , feature = 5)
+
+barplot(height = unlist(signif), main = "Times Significant")
+```
+
+
+```{r}
+# predictions from the model 
+test_probs <- predict(mod, newdata= test, type="response")
+test_pred = test_probs > .5
+correct = X[-idx, 7]
+
+
+test_pred[1:10]
+correct[1:10]
+score = 0
+na = 0
+
+for (i in 1:length(correct)) {
+  
+  if (is.na(test_pred[i])) {
+    na = na + 1
+    
+  } else if (!is.na(test_pred) & (test_pred[i] == correct[i])) {
+  score = score + 1
+  }
+}
+
+score
+na
 ```
 
 
 
 
 
+```{r}
+#looking at the hold reviews above 200
+X_review = X[X$x1 > 200,]
 
+dim(X_review)
+#i am goiing to have to maybe make a new way to test/train split for evaluation
+#but it works for the moment
+#train <- sample(c(TRUE, FALSE), nrow(biz), replace=TRUE)
+idx = sample(1:nrow(X_review), (nrow(X_review) * .8), replace = F)
+train = X_review[idx,]
 
-
-
-
-
+test = X_review[-idx,1:6]
+mod <- glm(y ~ ., data = train, family=binomial(link="logit"))
+summary(mod)
+```
 
 
 
